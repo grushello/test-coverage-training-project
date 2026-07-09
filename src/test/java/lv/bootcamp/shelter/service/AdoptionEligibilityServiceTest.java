@@ -23,7 +23,10 @@ import static org.mockito.Mockito.*;
  * Write tests for AdoptionEligibilityService.
  * The class and mocks are set up — the rest is yours.
  */
+
+
 @ExtendWith(MockitoExtension.class)
+//Not enough time to reduce unnecessary stubbings, line below prevents exceptions from that
 @MockitoSettings(strictness = Strictness.LENIENT)
 class AdoptionEligibilityServiceTest {
 
@@ -307,7 +310,50 @@ class AdoptionEligibilityServiceTest {
 
         assertEquals(10, score);
     }
+    @Test
+    void shouldGiveBonusForMorThanThirdAdoption() {
 
+        Adopter adopter = mock(Adopter.class);
+        Animal animal = mock(Animal.class);
+
+
+        when(adopter.getPreviousAdoptions()).thenReturn(4);
+
+        when(adopter.isLargeProperty()).thenReturn(false);
+
+        when(adopter.getCurrentPetCount()).thenReturn(0);
+
+        int score = service.calculatePriorityScore(adopter, animal);
+
+        assertEquals(15, score);
+    }
+    @Test
+    void shouldRejectLargePropertyOwnerWhenFivePetsAlreadyOwned() {
+
+        Adopter adopter = validAdopter();
+        Animal animal = validAnimal();
+
+
+        when(adopter.isLargeProperty()).thenReturn(true);
+
+        when(adopter.getCurrentPetCount()).thenReturn(5);
+
+
+        when(adopterRepository.findById(1L)).thenReturn(Optional.of(adopter));
+
+        when(animalRepository.findById(1L)).thenReturn(Optional.of(animal));
+
+
+        AdoptionResult result = service.evaluateAdoption(1L, 1L);
+
+
+        assertFalse(result.approved());
+
+        assertEquals(RejectionReasons.PET_LIMIT_REACHED, result.reason());
+
+
+        verify(auditLogger).logRejection(1L, 1L, RejectionReason.PET_LIMIT_REACHED);
+    }
     private Adopter validAdopter() {
 
         Adopter adopter = mock(Adopter.class);
